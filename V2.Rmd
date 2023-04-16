@@ -1,0 +1,251 @@
+---
+title: "Project V2"
+author: "Kishan"
+date: "2023-04-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+##Load the Packages
+
+```{r}
+library(tidyverse)
+library(scales)
+#install.packages("psych")
+library(psych)
+```
+
+##Load the Data
+
+```{r}
+hd_data <- read.csv("C:/Users/megha/OneDrive/Desktop/Machine Learning Project/Heart_Disease_Data.csv")
+head(hd_data)
+```
+
+## Data Description and Information
+
+#No of tuples and attributes in the data set
+
+```{r}
+n_rows <- nrow(hd_data)
+n_cols <- ncol(hd_data)
+cat("The dataset has", n_rows, "rows and", n_cols, "columns.")
+```
+
+#Names of attributes present in the data set
+
+```{r}
+names(hd_data)
+
+```
+
+#Finding missing Data
+
+```{r}
+missing_values <- sum(is.na(hd_data))
+cat("The dataset has", missing_values, "missing values.")
+```
+
+#Display Variables and their data types
+
+```{r}
+# Create a tibble with variable names and data types
+variable_info <- tibble(
+  Variable = names(hd_data),
+  Type = sapply(hd_data, class)
+)
+
+# View the variable names and their data types in table format
+variable_info
+```
+
+#Remove Duplicates
+
+```{r}
+heart_disease_data <- unique(hd_data)
+cat("The dataset now has", nrow(hd_data), "rows after removing duplicates.")
+
+```
+
+##Age is a categorical variable so I am converting it into continuous variable
+
+```{r}
+# Define the encoding for AgeCategory
+mean_AgeCategory <- c('55-59'=57, '80 or older'=80, '65-69'=67,
+                        '75-79'=77,'40-44'=42,'70-74'=72,'60-64'=62,
+                        '50-54'=52,'45-49'=47,'18-24'=21,'35-39'=37,
+                        '30-34'=32,'25-29'=27)
+
+# Apply the encoding to AgeCategory
+hd_data$AgeCategory <- mean_AgeCategory[hd_data$AgeCategory]
+
+# Convert AgeCategory to numeric
+hd_data$AgeCategory <- as.numeric(hd_data$AgeCategory)
+```
+
+```{r}
+head(hd_data)
+```
+
+##Statistics for Numerical Data 
+
+```{r}
+library(psych)
+
+cols_to_describe <- c("BMI", "PhysicalHealth", "MentalHealth", "AgeCategory", "SleepTime")
+hd_data[cols_to_describe] %>% describe()
+
+```
+
+##Plots for categorical variable 
+
+
+```{r}
+# Create a vector of variable names for the pie chart
+vars <- c("HeartDisease", "Smoking", "AlcoholDrinking", "Stroke", "DiffWalking", 
+          "Sex", 'Race', 'Diabetic', 'PhysicalActivity', 'GenHealth', 'Asthma', 
+          'KidneyDisease', 'SkinCancer')
+
+# Loop through each variable and create a pie chart
+for(var in vars) {
+  # Get the table of frequencies for the variable
+  freq_table <- table(hd_data[[var]])
+  
+  # Create a color palette with one color for each category in the variable
+  colors <- rainbow(length(freq_table))
+  
+  # Calculate percentage for each category
+  pct <- round(100 * freq_table / sum(freq_table), 1)
+  
+  # Add percentage to labels
+  labels <- paste(names(freq_table), " (", pct, "%)", sep="")
+  
+  # Create the pie chart
+  pie(freq_table, col = colors, labels = labels, main = var)
+  legend("topright", legend = names(freq_table), fill = colors)
+}
+
+```
+
+
+##checking for outliers for continuous data
+
+```{r}
+# Create a vector of variable names for the boxplots
+vars <- c("BMI", "PhysicalHealth", "MentalHealth", "SleepTime")
+
+# Loop through each variable and create a boxplot
+par(mfrow=c(2,2)) # arrange the plots in a 2x2 grid
+for(var in vars) {
+  # Create the boxplot
+  boxplot(hd_data[[var]], main = var)
+}
+
+```
+
+## removing outliers for BMI data and creating a box plot again
+
+```{r}
+# Find the lower and upper bounds of the interquartile range (IQR)
+Q1 <- quantile(hd_data$BMI, 0.25)
+Q3 <- quantile(hd_data$BMI, 0.75)
+IQR <- Q3 - Q1
+lower_bound <- Q1 - 1.5 * IQR
+upper_bound <- Q3 + 1.5 * IQR
+
+# Remove outliers from the dataset
+hd_data <- hd_data[hd_data$BMI >= lower_bound & hd_data$BMI <= upper_bound,]
+```
+
+
+```{r}
+boxplot(hd_data$BMI,main = "Box Plot of BMI",ylab = "BMI Value",col = "yellow",border = "blue",horizontal = FALSE)
+```
+##Converting data into numerical variables
+Here we have to convert our data set into numerical data. 
+
+```{r}
+##REDO THE CODE THIS IS NOT WORKING
+# Convert "yes" and "no" data to numeric using if statement
+hd_data$HeartDisease <- ifelse(hd_data$HeartDisease == "Yes", 1, 0)
+hd_data$Smoking <- ifelse(hd_data$Smoking == "Yes", 1, 0)
+hd_data$AlcoholDrinking <- ifelse(hd_data$AlcoholDrinking == "Yes", 1, 0)
+hd_data$Stroke <- ifelse(hd_data$Stroke == "Yes", 1, 0)
+hd_data$DiffWalking <- ifelse(hd_data$DiffWalking == "Yes", 1, 0)
+hd_data$PhysicalActivity <- ifelse(hd_data$PhysicalActivity == "Yes", 1, 0)
+hd_data$Asthma <- ifelse(hd_data$Asthma == "Yes", 1, 0)
+hd_data$KidneyDisease <- ifelse(hd_data$KidneyDisease == "Yes", 1, 0)
+hd_data$SkinCancer <- ifelse(hd_data$SkinCancer == "Yes", 1, 0)
+```
+
+
+##Convert GenHealth into numeric
+
+```{r}
+# Convert GenHealth to numeric
+hd_data$GenHealth <- ifelse(hd_data$GenHealth == "Excellent", 5,
+                                             ifelse(hd_data$GenHealth == "Very good", 4,
+                                                    ifelse(hd_data$GenHealth == "Good", 3,
+                                                           ifelse(hd_data$GenHealth == "Fair", 2, 1))))
+```
+
+##Convert Sex into numeric
+
+```{r}
+hd_data$Sex <- ifelse(hd_data$Sex == "Male", 2,
+                                             ifelse(hd_data$Sex == "Female", 1,0))
+```
+
+##Convert Diabetic into numeric
+
+```{r}
+hd_data$Diabetic <- ifelse(hd_data$Diabetic == "Yes", 4,
+                                             ifelse(hd_data$Diabetic == "No", 3,
+                                                    ifelse(hd_data$Diabetic == "No, borderline diabetes", 2,
+                                                           ifelse(hd_data$Diabetic == "Yes (during pregnancy)", 1, 0))))
+```
+
+##Convert Race into numeric
+
+```{r}
+hd_data$Race <- ifelse(hd_data$Race == "White", 6,
+                                             ifelse(hd_data$Race == "Black", 5,
+                                                    ifelse(hd_data$Race == "Asian", 4,
+                                                           ifelse(hd_data$Race == "Hispanic", 3,
+                                                           ifelse(hd_data$Race == "American Indian/Alaskan Native", 2, 1)))))
+```
+
+
+##Check the data After converting it into numeric
+
+```{r}
+head(hd_data)
+```
+
+##Save the updated data set for future use
+
+```{r}
+#write.csv(hd_data, file = "C:/Users/megha/OneDrive/Desktop/Machine Learning Project/heart_disease_data_v2.csv", row.names = FALSE)
+```
+By the above command we can save the new data set and use it for future.
+
+##Find the summary 
+
+```{r}
+summary(hd_data)
+```
+
+
+
+
+
