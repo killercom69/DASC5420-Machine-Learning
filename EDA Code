@@ -1,7 +1,7 @@
 ---
-title: "Final Project"
+title: "Project V2"
 author: "Kishan"
-date: "2023-04-14"
+date: "2023-04-15"
 output: html_document
 ---
 
@@ -15,296 +15,246 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-##Loading Packages
+
+##Load the Packages
 
 ```{r}
-library(ggplot2)
-library(readr)
-library(moments)
+library(tidyverse)
+library(scales)
+#install.packages("psych")
+library(psych)
 ```
 
-##Loading Dataset
+##Load the Data
 
 ```{r}
-Heart_Disease_Data <- read.csv("C:/Users/megha/OneDrive/Desktop/Machine Learning Project/Heart_Disease_Data.csv")
-head(Heart_Disease_Data)
+hd_data <- read.csv("C:/Users/megha/OneDrive/Desktop/Machine Learning Project/Heart_Disease_Data.csv")
+head(hd_data)
 ```
-I have loaded the data and checked if the data is loaded properly.
 
-##Know your data
+## Data Description and Information
+
+#No of tuples and attributes in the data set
 
 ```{r}
-n_rows <- nrow(Heart_Disease_Data)
-n_cols <- ncol(Heart_Disease_Data)
+n_rows <- nrow(hd_data)
+n_cols <- ncol(hd_data)
 cat("The dataset has", n_rows, "rows and", n_cols, "columns.")
 ```
-From the above query we have calculated how many tuples and attributes are there in our data-set. As we can see there are 18 attributes and 3,19,795 tuples.
 
-##Finding Missing Data 
+#Names of attributes present in the data set
 
 ```{r}
-missing_values <- sum(is.na(Heart_Disease_Data))
+names(hd_data)
+
+```
+
+#Finding missing Data
+
+```{r}
+missing_values <- sum(is.na(hd_data))
 cat("The dataset has", missing_values, "missing values.")
 ```
-As the data set which is available in kaggle is already cleaned there are no missing data present.
 
-##Remove Duplicates
-
-```{r}
-heart_disease_data <- unique(Heart_Disease_Data)
-cat("The dataset now has", nrow(Heart_Disease_Data), "rows after removing duplicates.")
-
-```
-From the above we can say that there are no duplicate values in our data set.
-
-##Display attributes
+#Display Variables and their data types
 
 ```{r}
-names(Heart_Disease_Data)
-```
-From the above attributes we can say that Race is an irrelevant column, so lets remove it from the data set for further analysis.
+# Create a tibble with variable names and data types
+variable_info <- tibble(
+  Variable = names(hd_data),
+  Type = sapply(hd_data, class)
+)
 
-##Removing irrelevant attributes
+# View the variable names and their data types in table format
+variable_info
+```
+
+#Remove Duplicates
 
 ```{r}
-irrelevant_cols <- c("Race")
-Heart_Disease_Data <- Heart_Disease_Data[, !(names(Heart_Disease_Data) %in% irrelevant_cols)]
-cat("The dataset now has", ncol(Heart_Disease_Data), "columns after removing irrelevant columns.")
+heart_disease_data <- unique(hd_data)
+cat("The dataset now has", nrow(hd_data), "rows after removing duplicates.")
 
 ```
-So after removing the irrelevant attribute "Race", we have 17 attributes(columns).
 
-
-##Checking for outliers
-As we are working on regression analysis we need to consider continuous variables in our analysis, here in this data set apart from BMI all the other variables are categorical variables whereas BMI is a continuous variable. So here we will be checking for outliers in BMI using Box plot. 
+##Age is a categorical variable so I am converting it into continuous variable
 
 ```{r}
-# create box plot
-boxplot(Heart_Disease_Data$BMI,main = "Box Plot of BMI",ylab = "BMI Value",col = "yellow",border = "blue",horizontal = FALSE)
+# Define the encoding for AgeCategory
+mean_AgeCategory <- c('55-59'=57, '80 or older'=80, '65-69'=67,
+                        '75-79'=77,'40-44'=42,'70-74'=72,'60-64'=62,
+                        '50-54'=52,'45-49'=47,'18-24'=21,'35-39'=37,
+                        '30-34'=32,'25-29'=27)
 
-# Calculate the outliers using boxplot.stats()
-bp <- boxplot.stats(Heart_Disease_Data$BMI)
-number_outliers <- length(bp$out)
+# Apply the encoding to AgeCategory
+hd_data$AgeCategory <- mean_AgeCategory[hd_data$AgeCategory]
 
-# Print the number of outliers
-cat("Number of outliers in BMI:", number_outliers)
+# Convert AgeCategory to numeric
+hd_data$AgeCategory <- as.numeric(hd_data$AgeCategory)
 ```
-So from the above box plot we can say that there are 10,396 outliers in our data set which we need to remove before fitting our data sets into the models.
+
+```{r}
+head(hd_data)
+```
+
+##Statistics for Numerical Data 
+
+```{r}
+library(psych)
+
+cols_to_describe <- c("BMI", "PhysicalHealth", "MentalHealth", "AgeCategory", "SleepTime")
+hd_data[cols_to_describe] %>% describe()
+
+```
+
+##Plots for categorical variable 
 
 
-##Removing outliers from our dataset
+```{r}
+# Create a vector of variable names for the pie chart
+vars <- c("HeartDisease", "Smoking", "AlcoholDrinking", "Stroke", "DiffWalking", 
+          "Sex", 'Race', 'Diabetic', 'PhysicalActivity', 'GenHealth', 'Asthma', 
+          'KidneyDisease', 'SkinCancer')
+
+# Loop through each variable and create a pie chart
+for(var in vars) {
+  # Get the table of frequencies for the variable
+  freq_table <- table(hd_data[[var]])
+  
+  # Create a color palette with one color for each category in the variable
+  colors <- rainbow(length(freq_table))
+  
+  # Calculate percentage for each category
+  pct <- round(100 * freq_table / sum(freq_table), 1)
+  
+  # Add percentage to labels
+  labels <- paste(names(freq_table), " (", pct, "%)", sep="")
+  
+  # Create the pie chart
+  pie(freq_table, col = colors, labels = labels, main = var)
+  legend("topright", legend = names(freq_table), fill = colors)
+}
+
+```
+
+
+##checking for outliers for continuous data
+
+```{r}
+# Create a vector of variable names for the boxplots
+vars <- c("BMI", "PhysicalHealth", "MentalHealth", "SleepTime")
+
+# Loop through each variable and create a boxplot
+par(mfrow=c(2,2)) # arrange the plots in a 2x2 grid
+for(var in vars) {
+  # Create the boxplot
+  boxplot(hd_data[[var]], main = var)
+}
+
+```
+
+## removing outliers for BMI data and creating a box plot again
 
 ```{r}
 # Find the lower and upper bounds of the interquartile range (IQR)
-Q1 <- quantile(Heart_Disease_Data$BMI, 0.25)
-Q3 <- quantile(Heart_Disease_Data$BMI, 0.75)
+Q1 <- quantile(hd_data$BMI, 0.25)
+Q3 <- quantile(hd_data$BMI, 0.75)
 IQR <- Q3 - Q1
 lower_bound <- Q1 - 1.5 * IQR
 upper_bound <- Q3 + 1.5 * IQR
 
 # Remove outliers from the dataset
-Heart_Disease_Data <- Heart_Disease_Data[Heart_Disease_Data$BMI >= lower_bound & Heart_Disease_Data$BMI <= upper_bound,]
+hd_data <- hd_data[hd_data$BMI >= lower_bound & hd_data$BMI <= upper_bound,]
 ```
 
-##Creating a new box plot after removing outliers
 
 ```{r}
-boxplot(Heart_Disease_Data$BMI,main = "Box Plot of BMI",ylab = "BMI Value",col = "yellow",border = "blue",horizontal = FALSE)
+boxplot(hd_data$BMI,main = "Box Plot of BMI",ylab = "BMI Value",col = "yellow",border = "blue",horizontal = FALSE)
 ```
-
-##Checking for number of tuples and attributes after remvoving outliers
-
-```{r}
-n_rows <- nrow(Heart_Disease_Data)
-n_cols <- ncol(Heart_Disease_Data)
-cat("The dataset has", n_rows, "rows and", n_cols, "columns.")
-```
-
 ##Converting data into numerical variables
 Here we have to convert our data set into numerical data. 
 
 ```{r}
 ##REDO THE CODE THIS IS NOT WORKING
 # Convert "yes" and "no" data to numeric using if statement
-Heart_Disease_Data$HeartDisease <- ifelse(Heart_Disease_Data$HeartDisease == "Yes", 1, 0)
-
-Heart_Disease_Data$Smoking <- ifelse(Heart_Disease_Data$Smoking == "Yes", 1, 0)
-
-Heart_Disease_Data$AlcoholDrinking <- ifelse(Heart_Disease_Data$AlcoholDrinking == "Yes", 1, 0)
-
-Heart_Disease_Data$Stroke <- ifelse(Heart_Disease_Data$Stroke == "Yes", 1, 0)
-
-Heart_Disease_Data$DiffWalking <- ifelse(Heart_Disease_Data$DiffWalking == "Yes", 1, 0)
-
-Heart_Disease_Data$Sex <- ifelse(Heart_Disease_Data$Sex == "Yes", 1, 0)
-
-Heart_Disease_Data$Diabetic <- ifelse(Heart_Disease_Data$Diabetic == "Yes", 1, 0)
-
-Heart_Disease_Data$PhysicalActivity <- ifelse(Heart_Disease_Data$PhysicalActivity == "Yes", 1, 0)
-
-Heart_Disease_Data$Asthma <- ifelse(Heart_Disease_Data$Asthma == "Yes", 1, 0)
-
-Heart_Disease_Data$KidneyDisease <- ifelse(Heart_Disease_Data$KidneyDisease == "Yes", 1, 0)
-
-Heart_Disease_Data$SkinCancer <- ifelse(Heart_Disease_Data$SkinCancer == "Yes", 1, 0)
+hd_data$HeartDisease <- ifelse(hd_data$HeartDisease == "Yes", 1, 0)
+hd_data$Smoking <- ifelse(hd_data$Smoking == "Yes", 1, 0)
+hd_data$AlcoholDrinking <- ifelse(hd_data$AlcoholDrinking == "Yes", 1, 0)
+hd_data$Stroke <- ifelse(hd_data$Stroke == "Yes", 1, 0)
+hd_data$DiffWalking <- ifelse(hd_data$DiffWalking == "Yes", 1, 0)
+hd_data$PhysicalActivity <- ifelse(hd_data$PhysicalActivity == "Yes", 1, 0)
+hd_data$Asthma <- ifelse(hd_data$Asthma == "Yes", 1, 0)
+hd_data$KidneyDisease <- ifelse(hd_data$KidneyDisease == "Yes", 1, 0)
+hd_data$SkinCancer <- ifelse(hd_data$SkinCancer == "Yes", 1, 0)
 ```
 
-```{r}
-head(Heart_Disease_Data)
-```
 
 ##Convert GenHealth into numeric
 
 ```{r}
 # Convert GenHealth to numeric
-Heart_Disease_Data$GenHealth <- ifelse(Heart_Disease_Data$GenHealth == "Excellent", 5,
-                                             ifelse(Heart_Disease_Data$GenHealth == "Very good", 4,
-                                                    ifelse(Heart_Disease_Data$GenHealth == "Good", 3,
-                                                           ifelse(Heart_Disease_Data$GenHealth == "Fair", 2, 1))))
-
-# View the updated dataset
-head(Heart_Disease_Data)
-
+hd_data$GenHealth <- ifelse(hd_data$GenHealth == "Excellent", 5,
+                                             ifelse(hd_data$GenHealth == "Very good", 4,
+                                                    ifelse(hd_data$GenHealth == "Good", 3,
+                                                           ifelse(hd_data$GenHealth == "Fair", 2, 1))))
 ```
 
-##Plot a histogram to check the continuous variable BMI
+##Convert Sex into numeric
 
 ```{r}
-ggplot(Heart_Disease_Data, aes(x = BMI)) +
-  geom_histogram(binwidth = 1, color = "blue", fill = "yellow") +
-  labs(x = "BMI", y = "Frequency", title = "Histogram of BMI")
+hd_data$Sex <- ifelse(hd_data$Sex == "Male", 2,
+                                             ifelse(hd_data$Sex == "Female", 1,0))
 ```
 
-##Converting Age Attribute into numeric
+##Convert Diabetic into numeric
 
 ```{r}
-Heart_Disease_Data$AgeCategory <- ifelse(Heart_Disease_Data$AgeCategory == "18-24", 1,
-                                  ifelse(Heart_Disease_Data$AgeCategory == "25-29", 2,
-                                  ifelse(Heart_Disease_Data$AgeCategory == "30-34", 3,
-                                  ifelse(Heart_Disease_Data$AgeCategory == "35-39", 4,
-                                  ifelse(Heart_Disease_Data$AgeCategory == "40-44", 5,
-                                  ifelse(Heart_Disease_Data$AgeCategory == "45-49", 6,
-                                  ifelse(Heart_Disease_Data$AgeCategory == "50-54", 7,
-                                  ifelse(Heart_Disease_Data$AgeCategory == "55-59", 8,
-                                  ifelse(Heart_Disease_Data$AgeCategory == "60-64", 9,
-                                  ifelse(Heart_Disease_Data$AgeCategory == "65-69", 10,
-                                  ifelse(Heart_Disease_Data$AgeCategory == "70-74", 11,
-                                  ifelse(Heart_Disease_Data$AgeCategory == "75-79", 12,
-                                  ifelse(Heart_Disease_Data$AgeCategory == "80 or older", 13, NA)))))))))))))
-
+hd_data$Diabetic <- ifelse(hd_data$Diabetic == "Yes", 4,
+                                             ifelse(hd_data$Diabetic == "No", 3,
+                                                    ifelse(hd_data$Diabetic == "No, borderline diabetes", 2,
+                                                           ifelse(hd_data$Diabetic == "Yes (during pregnancy)", 1, 0))))
 ```
 
+##Convert Race into numeric
+
 ```{r}
-head(Heart_Disease_Data)
+hd_data$Race <- ifelse(hd_data$Race == "White", 6,
+                                             ifelse(hd_data$Race == "Black", 5,
+                                                    ifelse(hd_data$Race == "Asian", 4,
+                                                           ifelse(hd_data$Race == "Hispanic", 3,
+                                                           ifelse(hd_data$Race == "American Indian/Alaskan Native", 2, 1)))))
+```
+
+
+##Check the data After converting it into numeric
+
+```{r}
+head(hd_data)
 ```
 
 ##Save the updated data set for future use
 
 ```{r}
-write.csv(Heart_Disease_Data, file = "C:/Users/megha/OneDrive/Desktop/Machine Learning Project/heart_disease_data_v1.csv", row.names = FALSE)
+#write.csv(hd_data, file = "C:/Users/megha/OneDrive/Desktop/Machine Learning Project/heart_disease_data_v2.csv", row.names = FALSE)
 ```
 By the above command we can save the new data set and use it for future.
 
-## Box plot for entire dataset
+##Find the summary 
 
 ```{r}
-boxplot(Heart_Disease_Data, main="Boxplot of Heart Disease Data")
-
+summary(hd_data)
 ```
 
-
-
-
-
-
-##Summary of the dataset
+##Plot the graph
 
 ```{r}
-summary(Heart_Disease_Data[c("BMI","AgeCategory","GenHealth","SleepTime")])
+##Plot a histogram to check the continuous variable BMI
+
+
+ggplot(hd_data, aes(x = BMI)) +
+  geom_histogram(binwidth = 1, color = "blue", fill = "yellow") +
+  labs(x = "BMI", y = "Frequency", title = "Histogram of BMI")
 ```
 
-----
-
-
-##Lasso Regression
-
-```{r}
-# # Load required libraries
-# library(glmnet)
-# library(caret)
-# 
-# # Read in data and set seed for reproducibility
-# set.seed(123)
-# 
-# 
-# # Split data into training and test sets
-# trainIndex <- createDataPartition(Heart_Disease_Data$BMI, p = .7, list = FALSE)
-# train <- Heart_Disease_Data[trainIndex, ]
-# test <- Heart_Disease_Data[-trainIndex, ]
-# 
-# # Define predictor variables and response variable
-# predictors <- names(Heart_Disease_Data)[!names(Heart_Disease_Data) %in% "BMI"]
-# response <- "BMI"
-# 
-# # Create matrix of predictor variables and response variable
-# x <- as.matrix(train[,predictors])
-# y <- train[,response]
-# 
-# # Fit Lasso regression model using cross-validation
-# lasso.fit <- cv.glmnet(x, y, alpha = 1, nfolds = 10)
-# 
-# # Print the optimal lambda value chosen by cross-validation
-# cat("Optimal lambda value:", lasso.fit$lambda.min, "\n")
-# 
-# # Plot the cross-validation error as a function of lambda
-# plot(lasso.fit)
-# 
-# # Extract coefficients from the Lasso model
-# lasso.coefs <- coef(lasso.fit, s = "lambda.min")
-# 
-# # Print the number of non-zero coefficients
-# cat("Number of non-zero coefficients:", sum(lasso.coefs[-1] != 0), "\n")
-# 
-# # Make predictions on the test set using the Lasso model
-# x.test <- as.matrix(test[,predictors])
-# y.test <- test[,response]
-# lasso.pred <- predict(lasso.fit, newx = x.test)
-# 
-# # Calculate root mean squared error (RMSE) on the test set
-# rmse <- sqrt(mean((y.test - lasso.pred)^2))
-# cat("RMSE on test set:", rmse, "\n")
-
-```
-
-
-
-```{r}
-library(glmnet)
-
-# Split data into train and test sets
-set.seed(123)
-train_idx <- sample(nrow(Heart_Disease_Data), 0.7 * nrow(Heart_Disease_Data))
-train <- Heart_Disease_Data[train_idx, ]
-test <- Heart_Disease_Data[-train_idx, ]
-
-# Define predictor and response variables
-x_train <- as.matrix(train[, c("AgeCategory", "Smoking", "AlcoholDrinking", "Stroke", "Diabetic", "GenHealth", "SleepTime", "PhysicalActivity")])
-y_train <- train$BMI
-
-# Fit Lasso model
-lasso_model <- glmnet(x_train, y_train, alpha = 1)
-
-# Predict on test set
-x_test <- as.matrix(test[, c("AgeCategory", "Smoking", "AlcoholDrinking", "Stroke", "Diabetic", "GenHealth", "SleepTime", "PhysicalActivity")])
-y_test_pred <- predict(lasso_model, newx = x_test)
-
-# Calculate RMSE on test set
-y_test_actual <- test$BMI
-RMSE <- sqrt(mean((y_test_pred - y_test_actual)^2))
-
-# Print RMSE
-cat("RMSE on test set:", RMSE, "\n")
-
-```
 
 
