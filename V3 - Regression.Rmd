@@ -1,0 +1,163 @@
+---
+title: "V3"
+author: "Kishan"
+date: "2023-04-15"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+##Loading Packages 
+
+```{r}
+library(mlbench)
+library(glmnet)
+library(dplyr)
+library(caret)
+
+```
+
+Load the necessary packages required for regression analysis.
+
+##Load the dataset
+
+```{r}
+heart_disease <- read.csv("C:/Users/megha/OneDrive/Desktop/Machine Learning Project/heart_disease_data_v2.csv")
+head(heart_disease)
+```
+Here I have loaded the head of data set to check whether all the data is in numeric to proceed further.
+
+##Spliting the data into training and test set
+
+```{r}
+# Split the data into training and test set
+set.seed(123)
+training.samples <- heart_disease$HeartDisease %>%
+createDataPartition(p = 0.75, list = FALSE)
+train.data <- heart_disease[training.samples, ]
+test.data <- heart_disease[-training.samples, ]
+
+# Create the matrix of predictors for glmnet function
+x <- as.matrix(train.data[2:18])
+
+# Convert the outcome (class) to a numerical variable
+y <- train.data$HeartDisease
+
+```
+
+Split the data into train and test to fit them into models.
+
+##Ridge Regression
+
+```{r}
+# Find the optimal lambda that minimizes the 10-fold cross-validation error:
+ridge <- glmnet(x, y, alpha = 0, lambda = NULL)
+cv.ridge <- cv.glmnet(x, y, alpha = 0)
+plot(cv.ridge)
+```
+##Find the lambda values
+
+```{r}
+cv.ridge$lambda.min
+cv.ridge$lambda.1se
+```
+##Plot the graph for lambda coefficients
+
+```{r}
+# Plot the coefficients
+plot(ridge, xvar = "lambda", label=T)
+abline(v=cv.ridge$lambda.min, col = "red", lty=2)
+abline(v=cv.ridge$lambda.1se, col="blue", lty=2)
+
+```
+
+##Calculate RMSE
+
+```{r}
+# Make predictions on the test data
+x.test <- as.matrix(test.data[2:18])
+predictions <- ridge %>% predict(x.test) 
+
+# Model performance metrics
+data.frame(
+RMSE.ridge = caret::RMSE(predictions, test.data$HeartDisease)
+)
+RMSE.ridge <- caret::RMSE(predictions, test.data$HeartDisease)
+```
+
+
+##Lasso Regression
+
+```{r}
+lasso <- glmnet(x, y, alpha = 1, lambda = NULL)
+# Cross-validation to find the optimal lambda penalization
+cv <- cv.glmnet(x, y, alpha = 1)
+plot(cv) # Display the best lambda value
+```
+##Find the lambda coefficients
+
+```{r}
+cv$lambda.min
+cv$lambda.1se
+```
+##Plot the graph for lambda coefficients
+
+```{r}
+# Plot the coefficients
+plot(lasso, xvar = "lambda", label=T)
+abline(v=cv$lambda.min, col = "red", lty=2)
+abline(v=cv$lambda.1se, col="blue", lty=2)
+
+```
+##Calculate RMSE
+
+```{r}
+# Make predictions on the test data
+predictions <- lasso %>% predict(x.test) 
+# Model performance metrics
+data.frame(
+RMSE.lasso = caret::RMSE(predictions, test.data$HeartDisease)
+)
+RMSE.lasso <- caret::RMSE(predictions, test.data$HeartDisease)
+
+```
+##Elastic net
+
+```{r}
+elastic <- train(
+HeartDisease ~., data = train.data, method = "glmnet",trControl = trainControl("cv", number = 10),tuneLength = 10)
+
+```
+
+##Calculate RMSE
+
+```{r}
+# Make predictions
+predictions <- elastic %>% predict(test.data)
+# Model prediction performance
+data.frame(
+RMSE.elastic = caret::RMSE(predictions, test.data$HeartDisease)
+)
+RMSE.elastic <- caret::RMSE(predictions, test.data$HeartDisease)
+
+```
+
+##Comparision 
+
+```{r}
+RMSE <- data.frame(model= c("Ridge Regression","Lasso Regression","Elastic Regression"), RMSE = c(RMSE.ridge,RMSE.lasso,RMSE.elastic))
+RMSE
+```
+
+
+
