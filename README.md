@@ -1,4 +1,4 @@
-# DASC5420
+# DASC5420 Theoretical Machine Learning
 This is my final semester project.
 
 In this project I have selected Personal indicators of heart disease where I have used Regression analysis to conclude my result.
