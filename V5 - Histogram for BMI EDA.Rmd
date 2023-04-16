@@ -1,0 +1,43 @@
+---
+title: "V5"
+author: "Kishan"
+date: "2023-04-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+##Load the Packages
+
+```{r}
+library(ggplot2)
+```
+
+##Load the dataset
+
+```{r}
+heart_disease <- read.csv("C:/Users/megha/OneDrive/Desktop/Machine Learning Project/heart_disease_data_v2.csv")
+head(heart_disease)
+```
+
+
+##Plot the graph
+
+```{r}
+##Plot a histogram to check the continuous variable BMI
+
+
+ggplot(heart_disease, aes(x = BMI)) +
+  geom_histogram(binwidth = 1, color = "blue", fill = "yellow") +
+  labs(x = "BMI", y = "Frequency", title = "Histogram of BMI")
+```
+
+
